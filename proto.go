@@ -1,0 +1,285 @@
+package nrpc
+
+import (
+	"encoding/binary"
+	"errors"
+	"fmt"
+
+	"github.com/ds248a/nrpc/codec"
+	"github.com/ds248a/nrpc/util"
+)
+
+const (
+	// CmdNone is invalid
+	CmdNone byte = 0
+
+	// CmdRequest the other side should response to a request message
+	CmdRequest byte = 1
+
+	// CmdResponse the other side should not response to a request message
+	CmdResponse byte = 2
+
+	// CmdNotify the other side should not response to a request message
+	CmdNotify byte = 3
+)
+
+const (
+	// HeaderIndexBodyLenBegin .
+	HeaderIndexBodyLenBegin = 0
+	// HeaderIndexBodyLenEnd .
+	HeaderIndexBodyLenEnd = 4
+	// HeaderIndexReserved .
+	HeaderIndexReserved = 4
+	// HeaderIndexCmd .
+	HeaderIndexCmd = 5
+	// HeaderIndexFlag .
+	HeaderIndexFlag = 6
+	// HeaderIndexMethodLen .
+	HeaderIndexMethodLen = 7
+	// HeaderIndexSeqBegin .
+	HeaderIndexSeqBegin = 8
+	// HeaderIndexSeqEnd .
+	HeaderIndexSeqEnd = 16
+	// HeaderFlagMaskError .
+	HeaderFlagMaskError byte = 0x01
+	// HeaderFlagMaskAsync .
+	HeaderFlagMaskAsync byte = 0x02
+)
+
+const (
+	// HeadLen represents Message head length.
+	HeadLen int = 16
+
+	// MaxMethodLen limits Message method length.
+	MaxMethodLen int = 127
+
+	// MaxBodyLen limits Message body length.
+	MaxBodyLen int = 1024*1024*64 - 16
+)
+
+// Header defines Message head
+type Header []byte
+
+// BodyLen returns Message body length.
+func (h Header) BodyLen() int {
+	return int(binary.LittleEndian.Uint32(h[HeaderIndexBodyLenBegin:HeaderIndexBodyLenEnd]))
+}
+
+// message creates a Message by body length.
+func (h Header) message(handler Handler) (*Message, error) {
+	bodyLen := h.BodyLen()
+	if bodyLen < 0 || bodyLen > MaxBodyLen {
+		return nil, fmt.Errorf("invalid body length: %v", bodyLen)
+	}
+
+	m := &Message{Buffer: handler.GetBuffer(HeadLen + bodyLen)}
+	binary.LittleEndian.PutUint32(m.Buffer[HeaderIndexBodyLenBegin:HeaderIndexBodyLenEnd], uint32(bodyLen))
+	return m, nil
+}
+
+// Message represents an arpc Message.
+type Message struct {
+	Buffer []byte
+	values map[interface{}]interface{}
+}
+
+// Len returns total length of buffer.
+func (m *Message) Len() int {
+	return len(m.Buffer)
+}
+
+// Cmd returns cmd.
+func (m *Message) Cmd() byte {
+	return m.Buffer[HeaderIndexCmd]
+}
+
+// SetCmd sets cmd.
+func (m *Message) SetCmd(cmd byte) {
+	m.Buffer[HeaderIndexCmd] = cmd
+}
+
+// IsError returns error flag.
+func (m *Message) IsError() bool {
+	return m.Buffer[HeaderIndexFlag]&HeaderFlagMaskError > 0
+}
+
+// SetError sets error flag.
+func (m *Message) SetError(isError bool) {
+	if isError {
+		m.Buffer[HeaderIndexFlag] |= HeaderFlagMaskError
+	} else {
+		m.Buffer[HeaderIndexFlag] &= ^HeaderFlagMaskError
+	}
+}
+
+// Error returns error.
+func (m *Message) Error() error {
+	if !m.IsError() {
+		return nil
+	}
+	return errors.New(util.BytesToStr(m.Buffer[HeadLen+m.MethodLen():]))
+}
+
+// IsAsync returns async flag.
+func (m *Message) IsAsync() bool {
+	return m.Buffer[HeaderIndexFlag]&HeaderFlagMaskAsync > 0
+}
+
+// SetAsync sets async flag.
+func (m *Message) SetAsync(isAsync bool) {
+	if isAsync {
+		m.Buffer[HeaderIndexFlag] |= HeaderFlagMaskAsync
+	} else {
+		m.Buffer[HeaderIndexFlag] &= ^HeaderFlagMaskAsync
+	}
+}
+
+// Values returns values.
+func (m *Message) Values() map[interface{}]interface{} {
+	return m.values
+}
+
+// SetFlagBit sets flag bit value by index.
+func (m *Message) SetFlagBit(index int, value bool) error {
+	switch index {
+	case 0, 1, 2, 3, 4, 5, 6, 7:
+		if value {
+			m.Buffer[HeaderIndexReserved] |= (0x1 << index)
+		} else {
+			m.Buffer[HeaderIndexReserved] &= (^(0x1 << index))
+		}
+		return nil
+	// case 8, 9:
+	// 	if value {
+	// 		m.Buffer[HeaderIndexFlag] |= (0x1 << (index - 2))
+	// 	} else {
+	// 		m.Buffer[HeaderIndexFlag] &= (^(0x1 << (index - 2)))
+	// 	}
+	// 	return nil
+	default:
+		break
+	}
+	return ErrInvalidFlagBitIndex
+}
+
+// IsFlagBitSet returns flag bit value.
+func (m *Message) IsFlagBitSet(index int) bool {
+	switch index {
+	case 0, 1, 2, 3, 4, 5, 6, 7:
+		return (m.Buffer[HeaderIndexReserved] & (0x1 << index)) != 0
+	// case 8, 9:
+	// 	return (m.Buffer[HeaderIndexFlag] & (0x1 << (index - 2))) != 0
+	default:
+		break
+	}
+	return false
+}
+
+// MethodLen returns method length.
+func (m *Message) MethodLen() int {
+	return int(m.Buffer[HeaderIndexMethodLen])
+}
+
+// SetMethodLen sets method length.
+func (m *Message) SetMethodLen(l int) {
+	m.Buffer[HeaderIndexMethodLen] = byte(l)
+}
+
+// Method returns method.
+func (m *Message) Method() string {
+	return string(m.Buffer[HeadLen : HeadLen+m.MethodLen()])
+}
+
+func (m *Message) method() string {
+	return util.BytesToStr(m.Buffer[HeadLen : HeadLen+m.MethodLen()])
+}
+
+// BodyLen returns body length.
+func (m *Message) BodyLen() int {
+	return int(binary.LittleEndian.Uint32(m.Buffer[HeaderIndexBodyLenBegin:HeaderIndexBodyLenEnd]))
+}
+
+// SetBodyLen sets body length.
+func (m *Message) SetBodyLen(l int) {
+	binary.LittleEndian.PutUint32(m.Buffer[HeaderIndexBodyLenBegin:HeaderIndexBodyLenEnd], uint32(l))
+}
+
+// Seq returns sequence number.
+func (m *Message) Seq() uint64 {
+	return binary.LittleEndian.Uint64(m.Buffer[HeaderIndexSeqBegin:HeaderIndexSeqEnd])
+}
+
+// SetSeq sets sequence number.
+func (m *Message) SetSeq(seq uint64) {
+	binary.LittleEndian.PutUint64(m.Buffer[HeaderIndexSeqBegin:HeaderIndexSeqEnd], seq)
+}
+
+// Data returns payload data after method.
+func (m *Message) Data() []byte {
+	length := HeadLen + m.MethodLen()
+	return m.Buffer[length:]
+}
+
+// Get returns value for key.
+func (m *Message) Get(key interface{}) (interface{}, bool) {
+	if len(m.values) == 0 {
+		return nil, false
+	}
+	value, ok := m.values[key]
+	return value, ok
+}
+
+// Set sets key-value pair.
+func (m *Message) Set(key interface{}, value interface{}) {
+	if key == nil || value == nil {
+		return
+	}
+	if m.values == nil {
+		m.values = map[interface{}]interface{}{}
+	}
+	m.values[key] = value
+}
+
+// newMessage creates a Message.
+func newMessage(cmd byte, method string, v interface{}, isError bool, isAsync bool, seq uint64, h Handler, codec codec.Codec, values map[interface{}]interface{}) *Message {
+	var (
+		data    []byte
+		msg     *Message
+		bodyLen int
+	)
+
+	data = util.ValueToBytes(codec, v)
+	bodyLen = len(method) + len(data)
+
+	if h == nil {
+		h = DefaultHandler
+	}
+
+	msg = &Message{Buffer: h.GetBuffer(HeadLen + bodyLen), values: values}
+	msg.SetCmd(cmd)
+	msg.SetError(isError)
+	msg.SetAsync(isAsync)
+	msg.SetMethodLen(len(method))
+	msg.SetBodyLen(bodyLen)
+	msg.SetSeq(seq)
+	copy(msg.Buffer[HeadLen:HeadLen+len(method)], method)
+	copy(msg.Buffer[HeadLen+len(method):], data)
+
+	return msg
+}
+
+func checkMethod(method string) error {
+	ml := len(method)
+	if ml == 0 || ml > MaxMethodLen {
+		return fmt.Errorf("invalid method length: %v, should <= %v", ml, MaxMethodLen)
+	}
+	return nil
+}
+
+// MessageCoder defines Message coding middleware interface.
+type MessageCoder interface {
+	// Encode wrap message before send to client
+	Encode(*Client, *Message) *Message
+	// Decode unwrap message between recv and handle
+	Decode(*Client, *Message) *Message
+}
