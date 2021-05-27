@@ -7,28 +7,17 @@ import (
 )
 
 var (
-	// TimeFormat is used to format time parameters.
-	TimeFormat = "2006/01/02 15:04:05.000"
-
-	// Output is used to receive log output.
-	Output = os.Stdout
-
-	// DefaultLogger is the default logger and is used by arpc
+	TimeFormat           = "2006/01/02 15:04:05.000"
+	Output               = os.Stdout
 	DefaultLogger Logger = &logger{level: LevelInfo}
 )
 
 const (
-	// LevelAll enables all logs.
 	LevelAll = iota
-	// LevelDebug logs are usually disabled in production.
 	LevelDebug
-	// LevelInfo is the default logging priority.
 	LevelInfo
-	// LevelWarn .
 	LevelWarn
-	// LevelError .
 	LevelError
-	// LevelNone disables all logs.
 	LevelNone
 )
 
@@ -41,12 +30,12 @@ type Logger interface {
 	Error(format string, v ...interface{})
 }
 
-// SetLogger sets default logger.
+// Sets default logger.
 func SetLogger(l Logger) {
 	DefaultLogger = l
 }
 
-// SetLevel sets default logger's priority.
+// Sets default logger's priority.
 func SetLevel(lvl int) {
 	switch lvl {
 	case LevelAll, LevelDebug, LevelInfo, LevelWarn, LevelError, LevelNone:
@@ -57,12 +46,12 @@ func SetLevel(lvl int) {
 	}
 }
 
-// logger implements Logger and is used in arpc by default.
+// Logger by default.
 type logger struct {
 	level int
 }
 
-// SetLevel sets logs priority.
+// Sets logs priority.
 func (l *logger) SetLevel(lvl int) {
 	switch lvl {
 	case LevelAll, LevelDebug, LevelInfo, LevelWarn, LevelError, LevelNone:
@@ -73,14 +62,14 @@ func (l *logger) SetLevel(lvl int) {
 	}
 }
 
-// Debug uses fmt.Printf to log a message at LevelDebug.
+// Uses fmt.Printf to log a message at LevelDebug.
 func (l *logger) Debug(format string, v ...interface{}) {
 	if LevelDebug >= l.level {
 		fmt.Fprintf(Output, time.Now().Format(TimeFormat)+" [DBG] "+format+"\n", v...)
 	}
 }
 
-// Info uses fmt.Printf to log a message at LevelInfo.
+// Uses fmt.Printf to log a message at LevelInfo.
 func (l *logger) Info(format string, v ...interface{}) {
 	if LevelInfo >= l.level {
 		fmt.Fprintf(Output, time.Now().Format(TimeFormat)+" [INF] "+format+"\n", v...)
@@ -94,35 +83,35 @@ func (l *logger) Warn(format string, v ...interface{}) {
 	}
 }
 
-// Error uses fmt.Printf to log a message at LevelError.
+// Uses fmt.Printf to log a message at LevelError.
 func (l *logger) Error(format string, v ...interface{}) {
 	if LevelError >= l.level {
 		fmt.Fprintf(Output, time.Now().Format(TimeFormat)+" [ERR] "+format+"\n", v...)
 	}
 }
 
-// Debug uses DefaultLogger to log a message at LevelDebug.
+// Uses DefaultLogger to log a message at LevelDebug.
 func Debug(format string, v ...interface{}) {
 	if DefaultLogger != nil {
 		DefaultLogger.Debug(format, v...)
 	}
 }
 
-// Info uses DefaultLogger to log a message at LevelInfo.
+// Uses DefaultLogger to log a message at LevelInfo.
 func Info(format string, v ...interface{}) {
 	if DefaultLogger != nil {
 		DefaultLogger.Info(format, v...)
 	}
 }
 
-// Warn uses DefaultLogger to log a message at LevelWarn.
+// Uses DefaultLogger to log a message at LevelWarn.
 func Warn(format string, v ...interface{}) {
 	if DefaultLogger != nil {
 		DefaultLogger.Warn(format, v...)
 	}
 }
 
-// Error uses DefaultLogger to log a message at LevelError.
+// Uses DefaultLogger to log a message at LevelError.
 func Error(format string, v ...interface{}) {
 	if DefaultLogger != nil {
 		DefaultLogger.Error(format, v...)
