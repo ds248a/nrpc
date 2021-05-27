@@ -5,7 +5,10 @@ import (
 	"time"
 )
 
-// Context represents an arpc Call's context.
+// ------------------
+//   Context
+// ------------------
+
 type Context struct {
 	Client  *Client
 	Message *Message
@@ -15,7 +18,7 @@ type Context struct {
 	handlers []HandlerFunc
 }
 
-// Get returns value for key.
+// Returns value for key.
 func (ctx *Context) Get(key interface{}) (interface{}, bool) {
 	if len(ctx.values) == 0 {
 		return nil, false
@@ -24,7 +27,7 @@ func (ctx *Context) Get(key interface{}) (interface{}, bool) {
 	return value, ok
 }
 
-// Set sets key-value pair.
+// Sets key-value pair.
 func (ctx *Context) Set(key interface{}, value interface{}) {
 	if key == nil || value == nil {
 		return
@@ -35,18 +38,17 @@ func (ctx *Context) Set(key interface{}, value interface{}) {
 	ctx.values[key] = value
 }
 
-// Values returns values.
+// Returns values.
 func (ctx *Context) Values() map[interface{}]interface{} {
 	return ctx.values
 }
 
-// Body returns body.
+// Returns body.
 func (ctx *Context) Body() []byte {
 	return ctx.Message.Data()
 }
 
-// Bind parses the body data and stores the result
-// in the value pointed to by v.
+// Bind parses the body data and stores the result in the value pointed to by 'v'.
 func (ctx *Context) Bind(v interface{}) error {
 	msg := ctx.Message
 	if msg.IsError() {
@@ -68,22 +70,22 @@ func (ctx *Context) Bind(v interface{}) error {
 	return nil
 }
 
-// Write responses a Message to the Client.
+// Responses a Message to the Client.
 func (ctx *Context) Write(v interface{}) error {
 	return ctx.write(v, false, TimeForever)
 }
 
-// WriteWithTimeout responses a Message to the Client with timeout.
+// Responses a Message to the Client with timeout.
 func (ctx *Context) WriteWithTimeout(v interface{}, timeout time.Duration) error {
 	return ctx.write(v, false, timeout)
 }
 
-// Error responses an error Message to the Client.
+// Responses an error Message to the Client.
 func (ctx *Context) Error(v interface{}) error {
 	return ctx.write(v, true, TimeForever)
 }
 
-// Next calls next middleware or method/router handler.
+// Calls next middleware or method/router handler.
 func (ctx *Context) Next() {
 	index := int(ctx.index)
 	if index < len(ctx.handlers) {
@@ -92,27 +94,27 @@ func (ctx *Context) Next() {
 	}
 }
 
-// Abort stops the one-by-one-calling of middlewares and method/router handler.
+// Stops the one-by-one-calling of middlewares and method/router handler.
 func (ctx *Context) Abort() {
 	ctx.index = int(math.MaxInt8)
 }
 
-// Deadline implements stdlib's Context.
+// Implements stdlib's Context.
 func (ctx *Context) Deadline() (deadline time.Time, ok bool) {
 	return
 }
 
-// Done implements stdlib's Context.
+// Implements stdlib's Context.
 func (ctx *Context) Done() <-chan struct{} {
 	return nil
 }
 
-// Err implements stdlib's Context.
+// Implements stdlib's Context.
 func (ctx *Context) Err() error {
 	return nil
 }
 
-// Value returns the value associated with this context for key, implements stdlib's Context.
+// Returns the value associated with this context for key, implements stdlib's Context.
 func (ctx *Context) Value(key interface{}) interface{} {
 	value, _ := ctx.Get(key)
 	return value

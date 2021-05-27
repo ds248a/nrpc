@@ -12,7 +12,10 @@ import (
 	"github.com/ds248a/nrpc/util"
 )
 
-// Server represents an arpc Server.
+// ------------------
+//   Server
+// ------------------
+
 type Server struct {
 	Accepted int64
 	CurrLoad int64
@@ -31,7 +34,7 @@ type Server struct {
 	clients map[*Client]util.Empty
 }
 
-// Serve starts service with listener.
+//
 func (s *Server) Serve(ln net.Listener) error {
 	s.Listener = ln
 	s.chStop = make(chan error)
@@ -40,7 +43,7 @@ func (s *Server) Serve(ln net.Listener) error {
 	return s.runLoop()
 }
 
-// Run starts tcp service on addr.
+//
 func (s *Server) Run(addr string) error {
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -54,7 +57,7 @@ func (s *Server) Run(addr string) error {
 	return s.runLoop()
 }
 
-// Stop stops service.
+//
 func (s *Server) Stop() error {
 	defer log.Info("%v %v Stop", s.Handler.LogTag(), s.Listener.Addr())
 	s.running = false
@@ -68,7 +71,7 @@ func (s *Server) Stop() error {
 	return nil
 }
 
-// Shutdown shutdown service.
+//
 func (s *Server) Shutdown(ctx context.Context) error {
 	defer log.Info("%v %v Shutdown", s.Handler.LogTag(), s.Listener.Addr())
 	s.running = false

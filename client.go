@@ -14,30 +14,18 @@ import (
 )
 
 const (
-	// TimeZero represents zero time.
-	TimeZero time.Duration = 0
-	// TimeForever represents forever time.
+	TimeZero    time.Duration = 0
 	TimeForever time.Duration = 1<<63 - 1
 )
 
-// DialerFunc defines the dialer used by arpc Client to connect to the server.
+// Used by Client to connect to the server.
 type DialerFunc func() (net.Conn, error)
 
-// rpcSession represents an active calling session.
-type rpcSession struct {
-	seq  uint64
-	done chan *Message
-}
+// ------------------
+//   Client
+// ------------------
 
-// newSession creates rpcSession
-func newSession(seq uint64) *rpcSession {
-	return &rpcSession{seq: seq, done: make(chan *Message, 1)}
-}
-
-// Client represents an arpc Client.
-// There may be multiple outstanding Calls or Notifys associated
-// with a single Client, and a Client may be used by
-// multiple goroutines simultaneously.
+// Client may be used by multiple goroutines simultaneously.
 type Client struct {
 	Conn    net.Conn
 	Codec   codec.Codec
@@ -65,7 +53,7 @@ type Client struct {
 	// UserData interface{}
 }
 
-// Get returns value for key.
+// Returns value for key.
 func (c *Client) Get(key interface{}) (interface{}, bool) {
 	c.mux.Lock()
 	defer c.mux.Unlock()
@@ -76,7 +64,7 @@ func (c *Client) Get(key interface{}) (interface{}, bool) {
 	return value, ok
 }
 
-// Set sets key-value pair.
+// Sets key-value pair.
 func (c *Client) Set(key interface{}, value interface{}) {
 	if key == nil || value == nil {
 		return
@@ -91,7 +79,7 @@ func (c *Client) Set(key interface{}, value interface{}) {
 	}
 }
 
-// Delete deletes key-value pair
+// Deletes key-value pair
 func (c *Client) Delete(key interface{}) {
 	c.mux.Lock()
 	defer c.mux.Unlock()
@@ -100,13 +88,12 @@ func (c *Client) Delete(key interface{}) {
 	}
 }
 
-// NewMessage creates a Message by client's seq, handler and codec.
+// Creates a Message by client's seq, handler and codec.
 func (c *Client) NewMessage(cmd byte, method string, v interface{}) *Message {
 	return newMessage(cmd, method, v, false, false, atomic.AddUint64(&c.seq, 1), c.Handler, c.Codec, nil)
 }
 
 // Call makes an rpc call with a timeout.
-// Call will block waiting for the server's response until timeout.
 func (c *Client) Call(method string, req interface{}, rsp interface{}, timeout time.Duration, args ...interface{}) error {
 	if err := c.checkCallArgs(method, timeout); err != nil {
 		return err
@@ -149,7 +136,6 @@ func (c *Client) Call(method string, req interface{}, rsp interface{}, timeout t
 }
 
 // CallWith uses context to make rpc call.
-// CallWith blocks to wait for a response from the server until it times out.
 func (c *Client) CallWith(ctx context.Context, method string, req interface{}, rsp interface{}, args ...interface{}) error {
 	if err := c.checkStateAndMethod(method); err != nil {
 		return err
@@ -262,7 +248,7 @@ func (c *Client) NotifyWith(ctx context.Context, method string, data interface{}
 	return nil
 }
 
-// PushMsg pushes a msg to Client's send queue with timeout.
+// Pushes a msg to Client's send queue with timeout.
 func (c *Client) PushMsg(msg *Message, timeout time.Duration) error {
 	err := c.CheckState()
 	if err != nil {
@@ -297,7 +283,7 @@ func (c *Client) PushMsg(msg *Message, timeout time.Duration) error {
 	return err
 }
 
-// Restart stops and restarts a Client.
+// Stops and starts the client.
 func (c *Client) Restart() error {
 	c.Stop()
 
@@ -331,7 +317,7 @@ func (c *Client) Restart() error {
 	return nil
 }
 
-// Stop stops a Client.
+// Stop stops the client.
 func (c *Client) Stop() {
 	c.mux.Lock()
 	defer c.mux.Unlock()
@@ -349,7 +335,7 @@ func (c *Client) Stop() {
 	}
 }
 
-// CheckState checks Client's state.
+// CheckState checks Client's state
 func (c *Client) CheckState() error {
 	if !c.running {
 		return ErrClientStopped
@@ -769,24 +755,27 @@ func NewClient(dialer DialerFunc) (*Client, error) {
 	return c, nil
 }
 
-// ClientPool represents an arpc Client Pool.
+// ------------------
+//   ClientPool
+// ------------------
+
 type ClientPool struct {
 	size    uint64
 	round   uint64
 	clients []*Client
 }
 
-// Size returns Client number.
+// Returns Client number.
 func (pool *ClientPool) Size() int {
 	return len(pool.clients)
 }
 
-// Get returns a Client by index.
+// Returns a Client by index.
 func (pool *ClientPool) Get(index int) *Client {
 	return pool.clients[uint64(index)%pool.size]
 }
 
-// Next returns a Client by round robin.
+// Returns a Client by round robin.
 func (pool *ClientPool) Next() *Client {
 	var client = pool.clients[atomic.AddUint64(&pool.round, 1)%pool.size]
 	if client.running && !client.reconnecting {
@@ -801,19 +790,19 @@ func (pool *ClientPool) Next() *Client {
 	return client
 }
 
-// Handler returns Handler.
+// Return Handler
 func (pool *ClientPool) Handler() Handler {
 	return pool.Next().Handler
 }
 
-// Stop stops all clients.
+// Stops all clients.
 func (pool *ClientPool) Stop() {
 	for _, c := range pool.clients {
 		c.Stop()
 	}
 }
 
-// NewClientPool creates a ClientPool.
+// Creates a ClientPool.
 func NewClientPool(dialer DialerFunc, size int) (*ClientPool, error) {
 	pool := &ClientPool{
 		size:    uint64(size),
@@ -838,7 +827,7 @@ func NewClientPool(dialer DialerFunc, size int) (*ClientPool, error) {
 	return pool, nil
 }
 
-// NewClientPoolFromDialers creates a ClientPool by multiple dialers.
+// Creates a ClientPool by multiple dialers.
 func NewClientPoolFromDialers(dialers []DialerFunc) (*ClientPool, error) {
 	pool := &ClientPool{
 		size:    0,
