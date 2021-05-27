@@ -8,35 +8,30 @@ import (
 	"github.com/ds248a/nrpc/log"
 )
 
-// Empty struct
 type Empty struct{}
 
-// Recover handles panic and logs stack info
 func Recover() {
 	if err := recover(); err != nil {
 		log.Error("runtime error: %v\ntraceback:\n%v\n", err, string(debug.Stack()))
 	}
 }
 
-// Safe wraps a function-calling with panic recovery
+// Wraps a function-calling with panic recovery
 func Safe(call func()) {
 	defer Recover()
 	call()
 }
 
-// StrToBytes hacks string to []byte
 func StrToBytes(s string) []byte {
 	x := (*[2]uintptr)(unsafe.Pointer(&s))
 	h := [3]uintptr{x[0], x[1], x[1]}
 	return *(*[]byte)(unsafe.Pointer(&h))
 }
 
-// BytesToStr hacks []byte to string
 func BytesToStr(b []byte) string {
 	return *(*string)(unsafe.Pointer(&b))
 }
 
-// ValueToBytes converts values to []byte
 func ValueToBytes(codec acodec.Codec, v interface{}) []byte {
 	if v == nil {
 		return nil
