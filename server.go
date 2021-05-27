@@ -161,10 +161,9 @@ func (s *Server) runLoop() error {
 	return err
 }
 
-// NewServer creates an arpc Server.
 func NewServer() *Server {
 	h := DefaultHandler.Clone()
-	h.SetLogTag("[ARPC SVR]")
+	h.SetLogTag("[NRPC SVR]")
 	return &Server{
 		Codec:   codec.DefaultCodec,
 		Handler: h,

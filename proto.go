@@ -77,7 +77,7 @@ func (h Header) message(handler Handler) (*Message, error) {
 	return m, nil
 }
 
-// Message represents an arpc Message.
+// Message represents an nrpc Message.
 type Message struct {
 	Buffer []byte
 	values map[interface{}]interface{}
