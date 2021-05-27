@@ -11,7 +11,6 @@ import (
 	"github.com/ds248a/nrpc/codec"
 	"github.com/ds248a/nrpc/log"
 	"github.com/ds248a/nrpc/util"
-	ws "github.com/ds248a/websocket"
 )
 
 const (
@@ -548,7 +547,7 @@ func (c *Client) runWebsocket() {
 		c.running = true
 		c.initReader()
 		go util.Safe(c.sendLoop)
-		c.Conn.(ws.WebsocketConn).HandleWebsocket(c.recvLoop)
+		c.Conn.(WebsocketConn).HandleWebsocket(c.recvLoop)
 	}
 }
 
@@ -722,7 +721,7 @@ func newClientWithConn(conn net.Conn, codec codec.Codec, handler Handler, onStop
 	c.asyncHandlerMap = make(map[uint64]HandlerFunc)
 	c.onStop = onStop
 
-	if _, ok := conn.(ws.WebsocketConn); !ok {
+	if _, ok := conn.(WebsocketConn); !ok {
 		c.run()
 	} else {
 		c.runWebsocket()
