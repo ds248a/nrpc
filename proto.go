@@ -57,7 +57,7 @@ const (
 	MaxBodyLen int = 1024*1024*64 - 16
 )
 
-// Header defines Message head
+// Header defines Message head.
 type Header []byte
 
 // BodyLen returns Message body length.

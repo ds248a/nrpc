@@ -79,7 +79,7 @@ func (c *Client) Set(key interface{}, value interface{}) {
 	}
 }
 
-// Deletes key-value pair
+// Deletes key-value pair.
 func (c *Client) Delete(key interface{}) {
 	c.mux.Lock()
 	defer c.mux.Unlock()

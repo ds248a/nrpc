@@ -34,7 +34,7 @@ type Server struct {
 	clients map[*Client]util.Empty
 }
 
-//
+// Serve .
 func (s *Server) Serve(ln net.Listener) error {
 	s.Listener = ln
 	s.chStop = make(chan error)
@@ -43,7 +43,7 @@ func (s *Server) Serve(ln net.Listener) error {
 	return s.runLoop()
 }
 
-//
+// Run .
 func (s *Server) Run(addr string) error {
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -57,7 +57,7 @@ func (s *Server) Run(addr string) error {
 	return s.runLoop()
 }
 
-//
+// Stop .
 func (s *Server) Stop() error {
 	defer log.Info("%v %v Stop", s.Handler.LogTag(), s.Listener.Addr())
 	s.running = false
@@ -71,7 +71,7 @@ func (s *Server) Stop() error {
 	return nil
 }
 
-//
+// Shutdown .
 func (s *Server) Shutdown(ctx context.Context) error {
 	defer log.Info("%v %v Shutdown", s.Handler.LogTag(), s.Listener.Addr())
 	s.running = false
@@ -161,6 +161,7 @@ func (s *Server) runLoop() error {
 	return err
 }
 
+// NewServer .
 func NewServer() *Server {
 	h := DefaultHandler.Clone()
 	h.SetLogTag("[NRPC SVR]")

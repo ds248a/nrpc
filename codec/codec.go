@@ -13,10 +13,10 @@ type Codec interface {
 	Unmarshal(data []byte, v interface{}) error
 }
 
-// Wraps std json
+// Wraps std json.
 type JSONCodec struct{}
 
-// Wraps std json.Marshal
+// Wraps std json.Marshal.
 func (j *JSONCodec) Marshal(v interface{}) ([]byte, error) {
 	return json.Marshal(v)
 }
@@ -26,7 +26,7 @@ func (j *JSONCodec) Unmarshal(data []byte, v interface{}) error {
 	return json.Unmarshal(data, v)
 }
 
-// Sets default codec instance
+// Sets default codec instance.
 func SetCodec(c Codec) {
 	DefaultCodec = c
 }
