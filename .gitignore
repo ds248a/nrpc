@@ -1,11 +1,5 @@
 # Binaries for programs and plugins
 *~
-*.exe
-*.dll
-*.dylib
-*.so
-*.test
-*.out
-*.toml
-tmp/
+*.sublime*
+.git/
 vendor/
